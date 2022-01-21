@@ -1,0 +1,809 @@
+﻿@page "/"
+<PageTitle>Stock Items Report</PageTitle>
+@using cosmosdbviewer.Data
+@using cosmosdbviewer.Services
+@using NPOI.XSSF.UserModel
+@using NPOI.SS.UserModel
+@inject IJSRuntime JS
+@inject ICosmosDbService cosmosDB
+@implements IDisposable
+
+<h1>Stock Items Report</h1>
+
+@if (items.Count < 5)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <button @onclick="DownloadFileFromStream" hidden="@isAddingItem" disabled="@IsGettingReport">Download Report</button>
+    <button @onclick="@ShowAddItemForm" hidden="@isAddingItem">Add Stock Item</button>
+    <EditForm hidden="@isNotAddingItem" EditContext=itemEditContext OnValidSubmit=EnterItem>
+        <DataAnnotationsValidator />
+        <table border="1">
+            <thead>
+                <tr>
+                    <td colspan="6" align="center"><h2>Add Item Form</h2></td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>StockItemName</th>
+                    <td><InputText id="name" @bind-Value="item.StockItemName" /></td>
+                    <th>Supplier</th>
+                    <td>
+                        <InputSelect id="supplier" EditContext=supplierEditContext ValueExpression="@(()=>item_supplier.SupplierName)" Value="@item_supplier.SupplierName" ValueChanged="@((string value) => OnSupplierValueChanged(value))">
+                            <option></option>
+                            @foreach (Supplier supplier in suppliers)
+                        {
+                            <option>@supplier.SupplierName</option>
+                        }
+                        <option>New Supplier...</option>
+                    </InputSelect>
+                </td>
+                <th>Color</th>
+                <td>
+                    <InputSelect id="color" ValueExpression="@(()=>color.ColorName)" Value="@color.ColorName" ValueChanged="@((string value) => OnColorValueChanged(value))">
+
+                        <option></option>
+                        @foreach (Color color in colors)
+                        {
+                            <option>@color.ColorName</option>
+                        }
+
+                    </InputSelect>
+                </td>
+            </tr>
+            <tr>
+                <th>UnitPackage</th>
+                <td>
+                    <InputSelect id="unitpackage" ValueExpression="@(()=>unitpackage.PackageTypeName)" Value="@unitpackage.PackageTypeName" ValueChanged="@((string value) => OnUnitPackageValueChanged(value))">
+                        <option></option>
+                        @foreach (PackageType packageType in packageTypes)
+                        {
+                            <option>@packageType.PackageTypeName</option>
+                        }
+                    </InputSelect>
+                </td>
+                <th>OuterPackage</th>
+                <td>
+                    <InputSelect id="outerpackage" ValueExpression="@(()=>outerpackage.PackageTypeName)" Value="@outerpackage.PackageTypeName" ValueChanged="@((string value) => OnOuterPackageValueChanged(value))">
+                        <option></option>
+                        @foreach (PackageType packageType in packageTypes)
+                        {
+                            <option>@packageType.PackageTypeName</option>
+                        }
+                    </InputSelect>
+                </td>
+                <th>Brand</th>
+                <td><InputText id="brand" @bind-Value="item.Brand" /></td>
+            </tr>
+            <tr>
+                <th>Size</th>
+                <td><InputText id="size" @bind-Value="item.Size" /></td>
+                <th>LeadTimeDays</th>
+                <td><InputNumber id="leadtime" @bind-Value="item.LeadTimeDays" /></td>
+                <th>QuantityPerOuter</th>
+                <td><InputNumber id="quantityperorder" @bind-Value="item.QuantityPerOuter" /></td>
+            </tr>
+            <tr>
+                <th>IsChillerStock</th>
+                <td><InputCheckbox id="ischillerstock" @bind-Value="item.IsChillerStock" /></td>
+                <th>TaxRate</th>
+                <td><InputNumber id="taxrate" @bind-Value="item.TaxRate" /></td>
+                <th>UnitPrice</th>
+                <td><InputNumber id="unitprice" @bind-Value="item.UnitPrice" /></td>
+            </tr>
+            <tr>
+                <th>TypicalWeightPerUnit</th>
+                <td><InputNumber id="weight" @bind-Value="item.TypicalWeightPerUnit" /></td>
+                <th>SearchDetails</th>
+                <td><InputText id="searchdetails" @bind-Value="item.SearchDetails" /></td>
+            </tr>
+            <tr>
+                <td colspan="6"><ValidationSummary /></td>
+            </tr>
+            <tr>
+                <td colspan="6">@debug</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <button type="Submit" disabled=@isItemError>Enter Item</button>
+            <button @onclick="@CancelAddItem">Cancel</button>
+        </tfoot>
+    </table>
+</EditForm>
+    <EditForm hidden="@isNotAddingSupplier" EditContext=supplierEditContext OnValidSubmit=EnterSupplier>
+        <DataAnnotationsValidator />
+        <table border="1">
+            <thead>
+                <tr>
+                    <td colspan="7" align="center"><h2>Add Supplier Form</h2></td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>SupplierName</th>
+                    <th>PaymentDays</th>
+                    <th>PhoneNumber</th>
+                    <th>DeliveryAddressLine1</th>
+                    <th>DeliveryAddressLine2</th>
+                    <th>DeliveryPostalCode</th>
+                    <th>WebsiteURL</th>
+                </tr>
+                <tr>
+                    <td><InputText id="name" @bind-Value="form_supplier.SupplierName" /></td>
+                    <td><InputNumber id="paymentdays" @bind-Value="form_supplier.PaymentDays" /></td>
+                    <td><InputText id="phone" @bind-Value="form_supplier.PhoneNumber" /></td>
+                    <td><InputText id="DeliveryAddressLine1" @bind-Value="form_supplier.DeliveryAddressLine1" /></td>
+                    <td><InputText id="DeliveryAddressLine2" @bind-Value="form_supplier.DeliveryAddressLine2" /></td>
+                    <td><InputText id="DeliveryPostalCode" @bind-Value="form_supplier.DeliveryPostalCode" /></td>
+                    <td><InputText id="WebsiteURL" @bind-Value="form_supplier.WebsiteURL" /></td>
+                </tr>
+                <tr>
+                    <td colspan="7"><ValidationSummary /></td>
+                </tr>
+                <tr>
+                    <td colspan="7">@debug</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <button type="Submit" disabled=@isSupplierError>Enter Supplier</button>
+                <button @onclick="@CancelAddSupplier" hidden="@isNotAddingSupplier">Cancel</button>
+            </tfoot>
+        </table>
+    </EditForm>
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr class="white">
+                <th>StockItemID</th>
+                <th>StockItemName</th>
+                <th>SupplierName</th>
+                <th>Color</th>
+                <th>UnitPackage</th>
+                <th>Brand</th>
+                <th>Size</th>
+                <th>LeadTimeDays</th>
+                <th>IsChillerStock</th>
+                <th>UnitPrice</th>
+                <th>ValidFrom</th>
+                <th>QuantityOnHand</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in items)
+            {
+                <tr>
+                    <td>
+                        <details>
+                            <summary>
+                                @item.StockItemID
+                            </summary>
+                            <div style="white-space:pre;">
+                                @item.ToString()
+                            </div>
+                        </details>
+
+                    </td>
+
+                    <td>@item.StockItemName</td>
+                    <td>
+                        <details>
+                            <summary>
+                                @item.Supplier.SupplierName
+                            </summary>
+                            <div>
+                                <table>
+                                    <tr>
+                                        <th>PhoneNumber</th>
+                                        <td>@item.Supplier.PhoneNumber</td>
+                                    </tr>
+                                    <tr>
+                                        <th>FaxNumber</th>
+                                        <td>@item.Supplier.FaxNumber</td>
+                                    </tr>
+                                    <tr>
+                                        <th>SupplierReference</th>
+                                        <td>@item.Supplier.SupplierReference</td>
+                                    </tr>
+                                    <tr>
+                                        <th>WebSiteURL</th>
+                                        <td>@item.Supplier.WebsiteURL</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </details>
+                    </td>
+                    <td>@(item.Color is null ? "" : item.Color.ColorName)</td>
+                    <td>@(item.UnitPackage is null ? "" : item.UnitPackage.PackageTypeName)</td>
+                    <td>@item.Brand</td>
+                    <td>@item.Size</td>
+                    <td>@item.LeadTimeDays</td>
+                    <td>@item.IsChillerStock</td>
+                    <td>@item.UnitPrice</td>
+                    <td>@item.ValidFrom</td>
+                    <td>@item.StockHolding.QuantityOnHand</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+@code {
+    private bool isItemError { get; set; } = true;
+    private bool isSupplierError { get; set; } = true;
+    private bool isAddingSupplier { get; set; } = false;
+    private bool isNotAddingSupplier { get; set; } = true;
+    private bool isAddingItem { get; set; } = false;
+    private bool isNotAddingItem { get; set; } = true;
+    private bool IsGettingReport { get; set; } = false;
+
+    private string debug = "";
+    private EditContext? itemEditContext;
+    private EditContext? supplierEditContext;
+    private StockItem item = new StockItem();
+    private Supplier item_supplier = new Supplier();
+    private Supplier form_supplier = new Supplier();
+    private Color color = new Color();
+    private PackageType unitpackage = new PackageType();
+    private PackageType outerpackage = new PackageType();
+    List<StockItem> items = new List<StockItem>();
+    List<Color> colors = new List<Color>();
+    List<Supplier> suppliers = new List<Supplier>();
+    List<PackageType> packageTypes = new List<PackageType>();
+
+    private Stream GetFileStream()
+    {
+        IWorkbook workbook = new XSSFWorkbook();
+        var dataFormat = workbook.CreateDataFormat();
+        var dataStyle = workbook.CreateCellStyle();
+        dataStyle.DataFormat = dataFormat.GetFormat("MM/dd/yyy HH:mm:ss");
+
+        string[] tabs = { "All Items", "Week Items" };
+        foreach (string tab in tabs)
+        {
+            ISheet worksheet = workbook.CreateSheet(tab);
+            worksheet.CreateFreezePane(0, 1);
+            int rowNumber = 0;
+            IRow row = worksheet.CreateRow(rowNumber++);
+            var headerFont = workbook.CreateFont();
+            headerFont.IsBold = true;
+            ICellStyle headerStyle = workbook.CreateCellStyle();
+            headerStyle.Alignment = HorizontalAlignment.Left;
+            headerStyle.FillForegroundColor = IndexedColors.LightTurquoise.Index;
+            headerStyle.FillPattern = FillPattern.SolidForeground;
+            headerStyle.SetFont(headerFont);
+            string[] headers = { "id", "StockItemID", "StockItemName", "Supplier.SupplierID", "Supplier.SupplierName", "Supplier.SupplierCategoryID", "Supplier.PrimaryContactPersonID", "Supplier.AlternateContactPersonID", "Supplier.DeliveryMethodID", "Supplier.DeliveryCityID", "Supplier.PostalCityID", "Supplier.SupplierReference", "Supplier.BankAccountName", "Supplier.BankAccountBranch", "Supplier.BankAccountCode", "Supplier.BankAccountNumber", "Supplier.BankInternationalCode", "Supplier.PaymentDays", "Supplier.InternalComments", "Supplier.PhoneNumber", "Supplier.FaxNumber", "Supplier.WebsiteURL", "Supplier.DeliveryAddressLine1", "Supplier.DeliveryAddressLine2", "Supplier.DeliveryPostalCode", "Supplier.DeliveryLocation", "Supplier.PostalAddressLine1", "Supplier.PostalAddressLine2", "Supplier.PostalPostalCode", "Supplier.LastEditedBy", "Supplier.ValidFrom", "Supplier.ValidTo", "Color.ColorID", "Color.ColorName", "Color.LastEditedBy", "Color.ValidFrom", "Color.ValidTo", "UnitPackage.PackageTypeID", "UnitPackage.PackageTypeName", "UnitPackage.LastEditedBy", "UnitPackage.ValidFrom", "UnitPackage.ValidTo", "OuterPackage.PackageTypeID", "OuterPackage.PackageTypeName", "OuterPackage.LastEditedBy", "OuterPackage.ValidFrom", "OuterPackage.ValidTo", "Brand", "Size", "LeadTimeDays", "QuantityPerOuter", "IsChillerStock", "StockHolding.StockItemID", "StockHolding.QuantityOnHand", "StockHolding.BinLocation", "StockHolding.LastStocktakeQuantity", "StockHolding.LastCostPrice", "StockHolding.ReorderLevel", "StockHolding.TargetStockLevel", "StockHolding.LastEditedBy", "StockHolding.LastEditedWhen", "Barcode", "TaxRate", "UnitPrice", "RecommendedRetailPrice", "TypicalWeightPerUnit", "MarketingComments", "InternalComments", "Photo", "CustomFields", "Tags", "SearchDetails", "LastEditedBy", "ValidFrom", "ValidTo" };
+            int headerno = 0;
+            ICell cell;
+            foreach (string hedr in headers)
+            {
+                cell = row.CreateCell(headerno++);
+                cell.CellStyle = headerStyle;
+                cell.SetCellValue(hedr);
+            }
+            ICellStyle bodyStyle = workbook.CreateCellStyle();
+            bodyStyle.Alignment = HorizontalAlignment.Left;
+            List<StockItem> tabItems = new();
+            if (tab.Equals("All Items"))
+            {
+                tabItems = items;
+            }
+            else
+            {
+                foreach (StockItem item in items)
+                {
+                    if (item.ValidFrom > DateTime.Now.AddDays(-7)) { tabItems.Add(item); }
+                }
+            }
+            tabItems.Sort(delegate (StockItem a, StockItem b) { return a.StockItemID.CompareTo(b.StockItemID); });
+            foreach (StockItem i in tabItems)
+            {
+                row = worksheet.CreateRow(rowNumber++);
+                int c = 0;
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.id);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockItemID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockItemName);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.SupplierID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.SupplierName);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.SupplierCategoryID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PrimaryContactPersonID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.AlternateContactPersonID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.DeliveryMethodID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.DeliveryCityID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PostalCityID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.SupplierReference);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.BankAccountName);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.BankAccountBranch);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.BankAccountCode);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.BankAccountNumber);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.BankInternationalCode);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PaymentDays);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.InternalComments);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PhoneNumber);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.FaxNumber);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.WebsiteURL);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.DeliveryAddressLine1);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.DeliveryAddressLine2);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.DeliveryPostalCode);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.DeliveryLocation);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PostalAddressLine1);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PostalAddressLine2);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.PostalPostalCode);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.LastEditedBy);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.ValidFrom.ToString());
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Supplier.ValidTo.ToString());
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.Color is not null) { cell.SetCellValue(i.Color.ColorID); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.Color is not null) { cell.SetCellValue(i.Color.ColorName); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.Color is not null) { cell.SetCellValue(i.Color.LastEditedBy); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.Color is not null) { cell.SetCellValue(i.Color.ValidFrom.ToString()); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.Color is not null) { cell.SetCellValue(i.Color.ValidTo.ToString()); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.UnitPackage is not null) { cell.SetCellValue(i.UnitPackage.PackageTypeID); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.UnitPackage is not null) { cell.SetCellValue(i.UnitPackage.PackageTypeName); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.UnitPackage is not null) { cell.SetCellValue(i.UnitPackage.LastEditedBy); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.UnitPackage is not null) { cell.SetCellValue(i.UnitPackage.ValidFrom.ToString()); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.UnitPackage is not null) { cell.SetCellValue(i.UnitPackage.ValidTo.ToString()); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.OuterPackage is not null) { cell.SetCellValue(i.OuterPackage.PackageTypeID); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.OuterPackage is not null) { cell.SetCellValue(i.OuterPackage.PackageTypeName); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.OuterPackage is not null) { cell.SetCellValue(i.OuterPackage.LastEditedBy); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.OuterPackage is not null) { cell.SetCellValue(i.OuterPackage.ValidFrom.ToString()); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                if (i.OuterPackage is not null) { cell.SetCellValue(i.OuterPackage.ValidTo.ToString()); }
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Brand);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Size);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.LeadTimeDays);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.QuantityPerOuter);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.IsChillerStock);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.StockItemID);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.QuantityOnHand);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.BinLocation);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.LastStocktakeQuantity);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue((double)i.StockHolding.LastCostPrice);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.ReorderLevel);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.TargetStockLevel);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.LastEditedBy);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.StockHolding.LastEditedWhen);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Barcode);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue((double)i.TaxRate);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue((double)i.UnitPrice);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue((double)i.RecommendedRetailPrice);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue((double)i.TypicalWeightPerUnit);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.MarketingComments);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.InternalComments);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Photo);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.CustomFields);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.Tags);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.SearchDetails);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.LastEditedBy);
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.ValidFrom.ToString());
+
+                cell = row.CreateCell(c++);
+                cell.CellStyle = bodyStyle;
+                cell.SetCellValue(i.ValidTo.ToString());
+            }
+            for (int i = 0; i < headers.Length - 1; i++) { worksheet.AutoSizeColumn(i); }
+        }
+        MemoryStream ms = new MemoryStream();
+        workbook.Write(ms);
+        var binaryData = ms.ToArray();
+        var fileStream = new MemoryStream(binaryData);
+        return fileStream;
+    }
+    private async Task DownloadFileFromStream()
+    {
+        IsGettingReport = true;
+        var fileStream = GetFileStream();
+        var fileName = "ItemsReport." + DateTime.Now.ToString("yyyyMMddHHmmss") + ".xlsx";
+        //var fileName = "log.bin";
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        IsGettingReport = false;
+    }
+    private void ShowAddItemForm()
+    {
+        isNotAddingItem = false;
+        isAddingItem = true;
+    }
+    private void CancelAddItem()
+    {
+        color = new Color();
+        unitpackage = new PackageType();
+        outerpackage = new PackageType();
+        form_supplier = new Supplier();
+        item = new StockItem();
+
+        itemEditContext = new EditContext(item);
+        itemEditContext.OnFieldChanged += HandleItemFieldChanged;
+        supplierEditContext = new EditContext(form_supplier);
+        supplierEditContext.OnFieldChanged += HandleSupplierFieldChanged;
+
+        isItemError = true;
+        isNotAddingItem = true;
+        isAddingItem = false;
+    }
+    private void CancelAddSupplier()
+    {
+        debug = "";
+        form_supplier = new Supplier();
+        supplierEditContext = new(form_supplier);
+        isNotAddingSupplier = true;
+        isAddingSupplier = false;
+        isNotAddingItem = false;
+        isSupplierError = true;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        items = await cosmosDB.GetItemsAsync("SELECT * FROM c");
+        foreach (StockItem i in items)
+        {
+            if (i.Color is not null)
+            {
+                if (!colors.Contains(i.Color)) { colors.Add(i.Color); }
+            }
+            if (i.Supplier is not null)
+            {
+                if (!suppliers.Contains(i.Supplier)) { suppliers.Add(i.Supplier); }
+            }
+            if (i.OuterPackage is not null)
+            {
+                if (!packageTypes.Contains(i.OuterPackage)) { packageTypes.Add(i.OuterPackage); }
+            }
+            if (i.UnitPackage is not null)
+            {
+                if (!packageTypes.Contains(i.UnitPackage)) { packageTypes.Add(i.UnitPackage); }
+            }
+        }
+        item.Supplier = item_supplier;
+    }
+    protected override void OnInitialized()
+    {
+        itemEditContext = new(item);
+        itemEditContext.OnFieldChanged += HandleItemFieldChanged;
+        supplierEditContext = new(form_supplier);
+        supplierEditContext.OnFieldChanged += HandleSupplierFieldChanged;
+    }
+    private void HandleItemFieldChanged(object sender, FieldChangedEventArgs e)
+    {
+        isItemError = !itemEditContext.Validate();
+
+        if (item.StockItemName is not null)
+        {
+            if (items.FindIndex(s => s.StockItemName.ToUpper() == item.StockItemName.ToUpper()) >= 0)
+            {
+                debug = "Exisiting StockItemName ";
+                isItemError = true;
+            }
+            else
+            {
+                debug = "";
+            }
+        }
+
+        StateHasChanged();
+    }
+    private void HandleSupplierFieldChanged(object sender, FieldChangedEventArgs e)
+    {
+        isSupplierError = !supplierEditContext.Validate();
+
+        if (form_supplier.SupplierName is not null)
+        {
+            if (suppliers.FindIndex(s => s.SupplierName.ToUpper() == form_supplier.SupplierName.ToUpper()) >= 0)
+            {
+                debug = "Exisiting SupplierName ";
+                isSupplierError = true;
+            }
+        }
+        StateHasChanged();
+    }
+    private Task OnSupplierValueChanged(string value)
+    {
+        switch (value)
+        {
+            case "":
+                item.Supplier = null;
+                item_supplier = new Supplier();
+                form_supplier = new Supplier();
+                supplierEditContext = new(form_supplier);
+                break;
+            case "New Supplier...":
+                isNotAddingSupplier = false;
+                isAddingSupplier = true;
+                isNotAddingItem = true;
+                break;
+            default:
+                item.Supplier = suppliers.Find(s => s.SupplierName.Contains(value));
+                item_supplier = item.Supplier;
+                break;
+        }
+        return Task.CompletedTask;
+    }
+    private Task OnColorValueChanged(string value)
+    {
+        item.Color = colors.Find(p => p.ColorName.Contains(value));
+        color = item.Color;
+        return Task.CompletedTask;
+    }
+    private Task OnUnitPackageValueChanged(string value)
+    {
+        item.UnitPackage = packageTypes.Find(p => p.PackageTypeName.Contains(value));
+        unitpackage = item.UnitPackage;
+        return Task.CompletedTask;
+    }
+    private Task OnOuterPackageValueChanged(string value)
+    {
+        item.OuterPackage = packageTypes.Find(p => p.PackageTypeName.Contains(value));
+        outerpackage = item.OuterPackage;
+        return Task.CompletedTask;
+    }
+    protected async Task EnterItem()
+    {
+        int newItemID = GetNextID("");
+        StockItemHolding itemholdings = new StockItemHolding();
+        itemholdings.StockItemID = newItemID;
+        item.StockItemID = newItemID;
+        item.StockHolding = itemholdings;
+        item.Supplier = item_supplier;
+        StockItem newitem = await cosmosDB.AddItemAsync(item);
+        items.Insert(0, newitem);
+        CancelAddItem();
+    }
+    private int GetNextID(string val)
+    {
+        int newid = 0;
+        if (val == "suppliers")
+        {
+            newid = suppliers.Count - 1;
+            do
+            {
+                newid += 1;
+            } while (suppliers.FindIndex(i => i.SupplierID == newid) >= 0);
+        }
+        else
+        {
+            newid = items.Count - 1;
+            do
+            {
+                newid += 1;
+            } while (items.FindIndex(i => i.StockItemID == newid) >= 0);
+        }
+        return newid;
+    }
+    private Task EnterSupplier()
+    {
+        form_supplier.SupplierID = GetNextID("suppliers");
+        suppliers.Add(form_supplier);
+        item_supplier = form_supplier;
+        item.Supplier = form_supplier;
+        isNotAddingSupplier = true;
+        isAddingSupplier = false;
+        isNotAddingItem = false;
+        return Task.CompletedTask;
+    }
+    public void Dispose()
+    {
+        itemEditContext.OnFieldChanged -= HandleItemFieldChanged;
+        supplierEditContext.OnFieldChanged -= HandleSupplierFieldChanged;
+    }
+}

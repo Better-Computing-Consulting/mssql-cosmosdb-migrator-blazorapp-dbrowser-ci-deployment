@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dbmigrate", "dbmigrate\dbmigrate.csproj", "{7680614F-6D76-48FF-8DCF-49B05E627A98}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cosmosdbviewer", "cosmosdbviewer\cosmosdbviewer.csproj", "{04808AC4-0764-4B4C-92D7-12071B466343}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{951813F3-2A41-4B45-B723-D42A32E4B899}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7680614F-6D76-48FF-8DCF-49B05E627A98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7680614F-6D76-48FF-8DCF-49B05E627A98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7680614F-6D76-48FF-8DCF-49B05E627A98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7680614F-6D76-48FF-8DCF-49B05E627A98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04808AC4-0764-4B4C-92D7-12071B466343}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04808AC4-0764-4B4C-92D7-12071B466343}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04808AC4-0764-4B4C-92D7-12071B466343}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04808AC4-0764-4B4C-92D7-12071B466343}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {227F8CED-3AC8-46B2-94E3-5BB829A127CB}
+	EndGlobalSection
+EndGlobal
