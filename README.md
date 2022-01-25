@@ -24,7 +24,7 @@ __Automatic deployment of Azure DevOps Project, Service Endpoints, and Pipeline.
 
 __Steps to reproduce:__
 
-1. Setup the DevOps project by running the __setdevopsproj.sh__ script.  Update the script variables to fit your environment.  This script requires the extension azure-devops, will run completely unattended if you set the AZURE_DEVOPS_EXT_GITHUB_PAT variable before running the script or by entering the you GitHub Pat in the script and uncommenting this line:
+1. Setup the DevOps project by running the __setdevopsproj.sh__ script.  Update the script variables to fit your environment.  This script requires the extension azure-devops, will run completely unattended if you set the __AZURE_DEVOPS_EXT_GITHUB_PAT__ variable before running the script or by entering the you GitHub Pat in the script and uncommenting this line:
 
 ```Shell
 #export AZURE_DEVOPS_EXT_GITHUB_PAT=enter-github-pat-here
