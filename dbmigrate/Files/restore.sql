@@ -1,6 +1,6 @@
 USE [master]
 RESTORE DATABASE [WideWorldImporters] 
-	FROM  DISK = N'C:\temp\WideWorldImporters-Full.bak' 
+	FROM  DISK = N'C:\temp\DATA\WideWorldImporters-Full.bak' 
 	WITH  FILE = 1,  
 		MOVE N'WWI_Primary' TO N'C:\temp\DATA\WideWorldImporters.mdf',  
 		MOVE N'WWI_UserData' TO N'C:\temp\DATA\WideWorldImporters_UserData.ndf',  
