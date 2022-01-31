@@ -1,5 +1,5 @@
 echo "Assert SQL DB Data folder exists"
-$sqlserver = "MSSQL01"
+$sqlserver = hostname
 $folder = "\\$sqlserver\C$\temp\DATA"
 if (-not (Test-Path $folder)){
      New-Item -ItemType Directory -Force -Path $folder
