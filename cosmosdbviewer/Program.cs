@@ -5,7 +5,6 @@ using Microsoft.Azure.Cosmos;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables();
-//var vaultUri = builder.Configuration["VaultUri"];
 Uri vaultUri = new(builder.Configuration["VaultUri"]);
 builder.Configuration.AddAzureKeyVault(vaultUri, new DefaultAzureCredential());
 

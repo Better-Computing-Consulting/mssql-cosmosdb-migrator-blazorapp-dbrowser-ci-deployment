@@ -24,7 +24,6 @@ if (args.Length == 4)
             StockItem resultItem = response;
             c++;
             if (c % 10 == 0) { Console.WriteLine(resultItem.StockItemID + " "); } else { Console.Write(resultItem.StockItemID + " "); }
-           
         }
     }
     catch (Exception ex)
