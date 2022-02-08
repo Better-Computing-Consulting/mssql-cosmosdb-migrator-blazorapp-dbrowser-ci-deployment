@@ -51,7 +51,7 @@ The pipeline will:
 4.	upload its container to the Container Registry, and
 5.	create a container instance from the image.
 
-This blog details each step and some of the features of dbmigrate and comsosdbviewer programs, including how to retrieve the cosmos db connection string from an Azure KeyVault while authenticating using the managed identity of the application container instance.
+This blog details each step and some of the features of dbmigrate and comsosdbviewer programs, including how to authenticate using the managed identity of the application container instance to an Azure KeyVault to retrieve the Cosmos DB connection string.
 
 https://bcc.bz/post/mssql-to-cosmos-db-migrator-and-containerized-blazor-app-azure-devops-ci-deployment
 
